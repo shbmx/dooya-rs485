@@ -22,6 +22,7 @@
 - 📊 Live position and motor status (opening / closing / stopped)
 - ⚙️ Adjust device configuration from the UI (direction, hand-pull, switch types)
 - 🔧 Program device addresses
+- 📐 Calibrate motor direction and travel limits with the standalone script
 - 🏠 Support for multiple curtains
 - 🏃 Smooth position tracking — polls faster while the motor is moving
 - 🩹 Guided calibration via a Home Assistant repair issue when the stroke isn't set
@@ -261,6 +262,41 @@ python test_program_address.py 0x34 0x12
 3. LED flashes 5 times = success
 
 **Note:** Edit the configuration section in each script to match your setup (IP, port, device ID).
+
+### calibration.py
+
+Calibrates motor direction and travel limits using the commands documented in
+[the DM35EQX RS485 protocol reference](2_DM35EQX_codes_RS485.pdf).
+The script runs independently of Home Assistant and uses only the Python standard library.
+
+Set `TCP_ADDRESS`, `TCP_PORT`, `DEVICE_ID_L`, and `DEVICE_ID_H` before running it.
+If you use `test_set_stroke.py` to move the motor, configure that script for the
+same gateway and device address; their defaults differ.
+
+| Action | Description |
+|--------|-------------|
+| `limits` | Read which of the four travel limits are set |
+| `limit-up` | Save the current position as the upper limit |
+| `limit-down` | Save the current position as the lower limit |
+| `limit-3`, `limit-4` | Save the current position as the third or fourth limit |
+| `settings` | Activate the motor's settings mode |
+| `reverse` | Set motor direction to opposite (`0x01`; does not toggle) |
+| `direction` | Restore the default motor direction (`0x00`) |
+| `factory-reset` | Restore factory settings, clearing saved limits and settings |
+
+Typical calibration workflow:
+
+1. Run `python calibration.py limits` to inspect the existing limits.
+2. If open/close are inverted, run `python calibration.py reverse`.
+3. Move the motor to the desired upper position and stop it.
+4. Run `python calibration.py limit-up`.
+5. Move the motor to the desired lower position and stop it.
+6. Run `python calibration.py limit-down`.
+7. Run `python calibration.py limits` to check the saved limits.
+
+⚠️ Commands other than `limits` change motor settings. Factory reset is optional;
+it is not required for the workflow above. Running the script without an action
+prints usage information without connecting to the gateway.
 
 ## Home Assistant Scripts & Automations
 
